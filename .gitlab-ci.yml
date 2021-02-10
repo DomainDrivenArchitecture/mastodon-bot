@@ -2,16 +2,48 @@ image:  node:lts-buster
 
 stages:
   - test
-  - build
+  - package
+  - upload
 
 cache:
+  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - node_modules/
 
+default:
+  before_script:
+  - apt update && apt -qqy install openjdk-11-jre-headless
+  - echo _auth=$NPM_PUBLSH_KEY >> .npmrc
+  - echo email=$NPM_PUBLSH_MAIL >> .npmrc
+  - echo always-auth=true >> .npmrc
+  - npm install
+  - npm install -g --save-dev shadow-cljs
+
 build:
   stage: test
-  script:
-    - apt update && apt -qqy install openjdk-11-jre-headless
-    - npm install
-    - npm install -g --save-dev shadow-cljs
+  script:    
     - shadow-cljs compile test
+
+package:
+  stage: package
+  artifacts:
+    paths:
+    - target/
+  script:    
+  - shadow-cljs compile app
+  - chmod a+x mastodon-bot.js
+  - sha256sum mastodon-bot.js > target/mastodon-bot.js.sha256
+  - sha512sum mastodon-bot.js > target/mastodon-bot.js.sha512
+
+upload:
+  stage: upload  
+  script:    
+  - mkdir -p target/npm-build/mastodon_bot
+  - cp mastodon-bot.js target/npm-build/mastodon_bot/
+  - cp target/mastodon-bot.js.sha256 target/npm-build/mastodon_bot/
+  - cp target/mastodon-bot.js.sha512 target/npm-build/mastodon_bot/
+  - cp package.json target/npm-build/mastodon_bot/
+  - cp README.md target/npm-build/mastodon_bot/
+  - #npm version --no-git-tag-version $(npm view <yourProject>@latest version)
+  - #npm version --no-git-tag-version prerelease
+  - npm publish ./target/npm-build/mastodon_bot --access public
