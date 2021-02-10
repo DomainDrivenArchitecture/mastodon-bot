@@ -44,6 +44,6 @@ upload:
   - cp target/mastodon-bot.js.sha512 target/npm-build/mastodon_bot/
   - cp package.json target/npm-build/mastodon_bot/
   - cp README.md target/npm-build/mastodon_bot/
-  - #npm version --no-git-tag-version $(npm view <yourProject>@latest version)
-  - #npm version --no-git-tag-version prerelease
+  #- npm version --no-git-tag-version $(npm view <yourProject>@latest version)
+  #- npm version --no-git-tag-version prerelease
   - npm publish ./target/npm-build/mastodon_bot --access public
