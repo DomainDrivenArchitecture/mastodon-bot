@@ -68,3 +68,17 @@ upload-release:
     - cp README.md target/npm-build/mastodon_bot/
     - npm version --no-git-tag-version $CI_COMMIT_TAG
     - npm publish ./target/npm-build/mastodon_bot --access public
+
+test-prerelease:
+  stage: test
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG == ""'
+  script:    
+    - echo $CI_COMMIT_TAG
+
+test-release:
+  stage: test
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG != ""'
+  script:    
+    - echo $
