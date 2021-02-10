@@ -1,4 +1,4 @@
-image:  node:lts-buster
+image: node:lts-buster
 
 stages:
   - test
@@ -12,13 +12,13 @@ cache:
 
 default:
   before_script:
-  - apt update && apt -qqy install openjdk-11-jre-headless 
-  - npm install
-  - npm install -g --save-dev shadow-cljs
+    - apt update && apt -qqy install openjdk-11-jre-headless
+    - npm install
+    - npm install -g --save-dev shadow-cljs
 
 build:
   stage: test
-  script:    
+  script:
     - shadow-cljs compile test
 
 package:
@@ -27,8 +27,8 @@ package:
     - if: '$CI_COMMIT_BRANCH == "master"'
   artifacts:
     paths:
-    - target/
-  script:    
+      - target/
+  script:
     - shadow-cljs compile app
     - chmod a+x target/mastodon-bot.js
     - sha256sum target/mastodon-bot.js > target/mastodon-bot.js.sha256
@@ -42,7 +42,7 @@ upload-prerelease:
     - echo _auth=$NPM_PUBLSH_KEY >> .npmrc
     - echo email=$NPM_PUBLSH_MAIL >> .npmrc
     - echo always-auth=true >> .npmrc
-  script:    
+  script:
     - mkdir -p target/npm-build/mastodon_bot
     - cp target/mastodon-bot.js target/npm-build/mastodon_bot/
     - cp target/mastodon-bot.js.sha256 target/npm-build/mastodon_bot/
@@ -52,7 +52,6 @@ upload-prerelease:
     - npm version --no-git-tag-version prerelease
     - npm publish ./target/npm-build/mastodon_bot --access public
 
-
 upload-release:
   stage: upload
   rules:
@@ -61,7 +60,7 @@ upload-release:
     - echo _auth=$NPM_PUBLSH_KEY >> .npmrc
     - echo email=$NPM_PUBLSH_MAIL >> .npmrc
     - echo always-auth=true >> .npmrc
-  script:    
+  script:
     - mkdir -p target/npm-build/mastodon_bot
     - cp target/mastodon-bot.js target/npm-build/mastodon_bot/
     - cp target/mastodon-bot.js.sha256 target/npm-build/mastodon_bot/
@@ -70,3 +69,12 @@ upload-release:
     - cp README.md target/npm-build/mastodon_bot/
     - npm version --no-git-tag-version $CI_COMMIT_TAG
     - npm publish ./target/npm-build/mastodon_bot --access public
+
+sast:
+  variables:
+    SAST_EXCLUDED_ANALYZERS:
+      bandit, brakeman, flawfinder, gosec, kubesec, phpcs-security-audit,
+      pmd-apex, security-code-scan, sobelow, spotbugs
+  stage: test
+include:
+  - template: Security/SAST.gitlab-ci.yml
