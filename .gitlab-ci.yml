@@ -23,6 +23,8 @@ build:
 
 package:
   stage: package
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
   artifacts:
     paths:
     - target/
