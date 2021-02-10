@@ -21,6 +21,17 @@ build:
   script:
     - shadow-cljs compile test
 
+sast:
+  variables:
+    SAST_EXCLUDED_ANALYZERS:
+      bandit, brakeman, flawfinder, gosec, kubesec, phpcs-security-audit,
+      pmd-apex, security-code-scan, sobelow, spotbugs
+  stage: test
+  before_script:
+  - echo "scan security"
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
 package:
   stage: package
   rules:
@@ -69,12 +80,3 @@ upload-release:
     - cp README.md target/npm-build/mastodon_bot/
     - npm version --no-git-tag-version $CI_COMMIT_TAG
     - npm publish ./target/npm-build/mastodon_bot --access public
-
-sast:
-  variables:
-    SAST_EXCLUDED_ANALYZERS:
-      bandit, brakeman, flawfinder, gosec, kubesec, phpcs-security-audit,
-      pmd-apex, security-code-scan, sobelow, spotbugs
-  stage: test
-include:
-  - template: Security/SAST.gitlab-ci.yml
