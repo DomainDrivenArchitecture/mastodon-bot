@@ -31,15 +31,15 @@ package:
     - target/
   script:    
   - shadow-cljs compile app
-  - chmod a+x mastodon-bot.js
-  - sha256sum mastodon-bot.js > target/mastodon-bot.js.sha256
-  - sha512sum mastodon-bot.js > target/mastodon-bot.js.sha512
+  - chmod a+x target/mastodon-bot.js
+  - sha256sum target/mastodon-bot.js > target/mastodon-bot.js.sha256
+  - sha512sum target/mastodon-bot.js > target/mastodon-bot.js.sha512
 
 upload:
   stage: upload  
   script:    
   - mkdir -p target/npm-build/mastodon_bot
-  - cp mastodon-bot.js target/npm-build/mastodon_bot/
+  - cp target/mastodon-bot.js target/npm-build/mastodon_bot/
   - cp target/mastodon-bot.js.sha256 target/npm-build/mastodon_bot/
   - cp target/mastodon-bot.js.sha512 target/npm-build/mastodon_bot/
   - cp package.json target/npm-build/mastodon_bot/
