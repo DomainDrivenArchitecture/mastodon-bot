@@ -1,12 +1,17 @@
-image:  node:lts
+image:  node:buster-lts
 
 stages:
   - test
   - build
 
+cache:
+  paths:
+    - node_modules/
+
 build:
   stage: test
   script:
+    - apt update && apt -qqy install openjdk-11-jre-headless
     - npm install
     - npm install -g --save-dev shadow-cljs
     - shadow-cljs compile test
