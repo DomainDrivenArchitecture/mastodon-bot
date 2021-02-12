@@ -1,5 +1,5 @@
 stages:
-  - test
+  - build_and_test
   - package
   - security
   - upload
@@ -29,23 +29,35 @@ stages:
     - cp target/mastodon-bot.js.sha512 target/npm-build/
     - cp README.md target/npm-build/
 
-build:
+build_and_test:
   <<: *cljs
-  stage: test
+  stage: build_and_test
   script:
     - shadow-cljs compile test
+
+#activate as soon as https://github.com/thheller/shadow-cljs/issues/843 is implemented  
+.report:
+  <<: *cljs
+  stage: build_and_test
+  script:
+    - shadow-cljs run shadow.cljs.build-report app target/build-report.html
+  artifacts:
+    paths:
+      - target/build-report.html
 
 package:
   <<: *cljs
   stage: package
-  artifacts:
-    paths:
-      - target/
   script:
     - shadow-cljs compile app
     - chmod a+x target/mastodon-bot.js
     - sha256sum target/mastodon-bot.js > target/mastodon-bot.js.sha256
     - sha512sum target/mastodon-bot.js > target/mastodon-bot.js.sha512
+  artifacts:
+    paths:
+      - target/mastodon-bot.js
+      - target/mastodon-bot.js.sha256
+      - target/mastodon-bot.js.sha512
 
 sast:
   variables:
@@ -64,9 +76,11 @@ upload-prerelease:
   rules:
     - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG == null'
   script:
-    - npm version --no-git-tag-version prerelease
     - cp package.json target/npm-build/
     - npm publish ./target/npm-build --access public
+    # unsure wether that's a good idea to bump versions from ci.
+    #- npm version prerelease -m "[skip-ci] version bump prerelease version"
+    #- git push
 
 upload-release:
   <<: *js-upload
@@ -74,6 +88,5 @@ upload-release:
   rules:
     - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG != null'
   script:
-    - npm version --no-git-tag-version $CI_COMMIT_TAG
     - cp package.json target/npm-build/
     - npm publish ./target/npm-build --access public
