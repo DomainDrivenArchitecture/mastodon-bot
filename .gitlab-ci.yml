@@ -22,15 +22,12 @@ stages:
     paths:
       - node_modules/
   before_script:
-    - echo _auth=$NPM_PUBLSH_KEY >> .npmrc
-    - echo email=$NPM_PUBLSH_MAIL >> .npmrc
-    - echo always-auth=true >> .npmrc
-    - mkdir -p target/npm-build/mastodon_bot
-    - cp target/mastodon-bot.js target/npm-build/mastodon_bot/
-    - cp target/mastodon-bot.js.sha256 target/npm-build/mastodon_bot/
-    - cp target/mastodon-bot.js.sha512 target/npm-build/mastodon_bot/
-    - cp package.json target/npm-build/mastodon_bot/
-    - cp README.md target/npm-build/mastodon_bot/
+    - echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+    - mkdir -p target/npm-build
+    - cp target/mastodon-bot.js target/npm-build/
+    - cp target/mastodon-bot.js.sha256 target/npm-build/
+    - cp target/mastodon-bot.js.sha512 target/npm-build/
+    - cp README.md target/npm-build/
 
 build:
   <<: *cljs
@@ -68,7 +65,8 @@ upload-prerelease:
     - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG == null'
   script:
     - npm version --no-git-tag-version prerelease
-    - npm publish ./target/npm-build/mastodon_bot --access public
+    - cp package.json target/npm-build/
+    - npm publish ./target/npm-build --access public
 
 upload-release:
   <<: *js-upload
@@ -77,4 +75,5 @@ upload-release:
     - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG != null'
   script:
     - npm version --no-git-tag-version $CI_COMMIT_TAG
-    - npm publish ./target/npm-build/mastodon_bot --access public
+    - cp package.json target/npm-build/
+    - npm publish ./target/npm-build --access public
