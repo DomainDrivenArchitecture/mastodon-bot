@@ -1,27 +1,14 @@
 (ns mastodon-bot.tumblr-api
   (:require
-   [clojure.spec.alpha :as s]
-   [clojure.spec.test.alpha :as st]
    [orchestra.core :refer-macros [defn-spec]]
    [clojure.string :as string]
+   [mastodon-bot.tumblr-domain :as td]
    [mastodon-bot.infra :as infra]
    ["tumblr" :as tumblr]
    ))
 
-(s/def ::consumer_key string?)
-(s/def ::consumer_secret string?)
-(s/def ::token string?)
-(s/def ::token_secret string?)
-(def tumblr-auth? (s/keys :req-un [::consumer_key ::consumer_secret ::token
-                                    ::token_secret]))
-
-(s/def ::limit pos?)
-(s/def ::account string?)
-(s/def ::accounts (s/* ::account))
-(def tumblr-source?  (s/keys :req-un [::limit ::accounts]))
-
 (defn-spec tumblr-client any?
-  [access-keys tumblr-auth?
+  [access-keys td/tumblr-auth?
    account string?]
   (try
     (tumblr/Blog. account (clj->js access-keys))
