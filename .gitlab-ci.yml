@@ -29,11 +29,18 @@ stages:
     - cp target/mastodon-bot.js.sha512 target/npm-build/
     - cp README.md target/npm-build/
 
+.clj-job: &clj
+  image: clojure:lein-2.7.1-alpine
+
 build_and_test:
   <<: *cljs
   stage: build_and_test
   script:
     - shadow-cljs compile test
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .m2
 
 #activate as soon as https://github.com/thheller/shadow-cljs/issues/843 is implemented  
 .report:
@@ -70,7 +77,7 @@ sast:
 include:
   - template: Security/SAST.gitlab-ci.yml
 
-upload-prerelease:
+upload-cljs-prerelease:
   <<: *js-upload
   stage: upload
   rules:
@@ -82,7 +89,15 @@ upload-prerelease:
     #- npm version prerelease -m "[skip-ci] version bump prerelease version"
     #- git push
 
-upload-release:
+upload-clj-prerelease:
+  <<: *clj
+  stage: upload
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG == null'
+  script:
+    - lein deploy
+
+upload-js-release:
   <<: *js-upload
   stage: upload
   rules:
