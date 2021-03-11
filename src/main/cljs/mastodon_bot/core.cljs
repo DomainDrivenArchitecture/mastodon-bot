@@ -86,8 +86,8 @@
           (print usage)
           :default
           (let [config (infra/load-config config-location)]
-            (when (not (s/valid? config? config))
-              (s/explain config? config)
+            (when (not (s/valid? cd/config? config))
+              (s/explain cd/config? config)
               (infra/exit-with-error "Bad configuration"))
             (transform! config)))))))
 
