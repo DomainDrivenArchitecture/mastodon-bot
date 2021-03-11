@@ -1,51 +1,18 @@
 (ns mastodon-bot.transform
   (:require
-   [clojure.spec.alpha :as s]
-   [clojure.spec.test.alpha :as st]
    [orchestra.core :refer-macros [defn-spec]]
    [clojure.string :as string]
    [mastodon-bot.infra :as infra]
-   [mastodon-bot.mastodon-api :as masto]
-   [mastodon-bot.twitter-api :as twitter]
-   [mastodon-bot.rss-api :as rss]
-   [mastodon-bot.tumblr-api :as tumblr]
+   [mastodon-bot.mastodon-domain :as md]
+   [mastodon-bot.mastodon-api :as ma]
+   [mastodon-bot.twitter-domain :as twd]
+   [mastodon-bot.twitter-api :as twa]
+   [mastodon-bot.rss-api :as ra]
+   [mastodon-bot.tumblr-domain :as td]
+   [mastodon-bot.tumblr-api :as ta]
+   [mastodon-bot.transform-domain :as trd]
    ["deasync" :as deasync]
    ["request" :as request]))
-
-(s/def ::created-at any?)
-(s/def ::text string?)
-(s/def ::untrimmed-text string?)
-(s/def ::media-links string?)
-(s/def ::screen_name string?)
-(def intermediate?  (s/keys :req-un [::created-at ::text ::screen_name]
-                     :opt-un [::media-links ::untrimmed-text]))
-
-(s/def ::source-type #{:twitter :rss :tumblr})
-(s/def ::resolve-urls? boolean?)
-(s/def ::content-filter string?)
-(s/def ::content-filters (s/* ::content-filter))
-(s/def ::keyword-filter string?)
-(s/def ::keyword-filters (s/* ::keyword-filter))
-(s/def ::replacements any?)
-(defmulti source-type :source-type)
-(defmethod source-type :twitter [_]
-  (s/merge (s/keys :req-un[::source-type]) twitter/twitter-source?))
-(defmethod source-type :rss [_]
-  (s/merge (s/keys :req-un [::source-type]) rss/rss-source?))
-(defmethod source-type :tumblr [_]
-  (s/merge (s/keys :req-un [::source-type]) tumblr/tumblr-source?))
-(s/def ::source (s/multi-spec source-type ::source-type))
-
-(s/def ::target-type #{:mastodon})
-(defmulti target-type :target-type)
-(defmethod target-type :mastodon [_]
-  (s/merge (s/keys :req-un [::target-type]) masto/mastodon-target?))
-(s/def ::target (s/multi-spec target-type ::target-type))
-
-(s/def ::transformation (s/keys :req-un [::source ::target]
-                                :opt-un [::resolve-urls? ::content-filters ::keyword-filters 
-                                         ::replacements]))
-(def transformations? (s/* ::transformation))
 
 (defn resolve-url [[uri]]
   (try
@@ -62,60 +29,60 @@
 
 (def shortened-url-pattern #"(https?://)?(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,}))\.?)(?::\d{2,5})?(?:[/?#]\S*)?")
 
-(defn-spec intermediate-resolve-urls intermediate?
-  [resolve-urls? ::resolve-urls?
-   input intermediate?]
+(defn-spec intermediate-resolve-urls trd/intermediate?
+  [resolve-urls? ::trd/resolve-urls?
+   input trd/intermediate?]
   (if resolve-urls?
     (update input :text #(string/replace % shortened-url-pattern resolve-url))
     input))
 
-(defn-spec content-filter-regexes ::content-filters
-  [transformation ::transformation]
+(defn-spec content-filter-regexes ::trd/content-filters
+  [transformation ::trd/transformation]
   (mapv re-pattern (:content-filters transformation)))
 
-(defn-spec keyword-filter-regexes ::keyword-filters
-  [transformation ::transformation]
+(defn-spec keyword-filter-regexes ::trd/keyword-filters
+  [transformation ::trd/transformation]
   (mapv re-pattern (:keyword-filters transformation)))
 
 (defn-spec blocked-content? boolean?
-  [transformation ::transformation
+  [transformation ::trd/transformation
    text string?]
   (boolean
    (or (some #(re-find % text) (content-filter-regexes transformation))
        (when (not-empty (keyword-filter-regexes transformation))
          (empty? (some #(re-find % text) (keyword-filter-regexes transformation)))))))
 
-(defn-spec perform-replacements intermediate?
-  [transformation ::transformation
-   input intermediate?]
+(defn-spec perform-replacements trd/intermediate?
+  [transformation ::trd/transformation
+   input trd/intermediate?]
   (update input :text #(reduce-kv string/replace % (:replacements transformation))))
 
 (defn-spec post-tweets-to-mastodon any?
-  [mastodon-auth masto/mastodon-auth?
-   transformation ::transformation
+  [mastodon-auth md/mastodon-auth?
+   transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [source target resolve-urls?]} transformation]
     (fn [error tweets response]
       (if error
         (infra/exit-with-error error)
         (->> (infra/js->edn tweets)
-             (map twitter/parse-tweet)
+             (map twa/parse-tweet)
              (filter #(> (:created-at %) last-post-time))
              (remove #(blocked-content? transformation (:text %)))
              (map #(intermediate-resolve-urls resolve-urls? %))
-             (map #(twitter/nitter-url source %))
+             (map #(twa/nitter-url source %))
              (map #(perform-replacements transformation %))
-             (map #(masto/intermediate-to-mastodon target %))
-             (masto/post-items mastodon-auth target))))))
+             (map #(ma/intermediate-to-mastodon target %))
+             (ma/post-items mastodon-auth target))))))
 
 (defn-spec tweets-to-mastodon any?
-  [mastodon-auth masto/mastodon-auth?
-   twitter-auth twitter/twitter-auth?
-   transformation ::transformation
+  [mastodon-auth md/mastodon-auth?
+   twitter-auth twd/twitter-auth?
+   transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [source target resolve-urls?]} transformation]
     (doseq [account (:accounts source)]
-      (twitter/user-timeline
+      (twa/user-timeline
        twitter-auth
        source
        account
@@ -125,8 +92,8 @@
         last-post-time)))))
 
 (defn-spec post-tumblr-to-mastodon any?
-  [mastodon-auth masto/mastodon-auth?
-   transformation ::transformation
+  [mastodon-auth md/mastodon-auth?
+   transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [source target resolve-urls?]} transformation]
     (fn [error tweets response]
@@ -134,21 +101,21 @@
         (infra/exit-with-error error)
         (->> (infra/js->edn tweets)
              :posts
-             (mapv tumblr/parse-tumblr-post)
+             (mapv ta/parse-tumblr-post)
              (filter #(> (:created-at %) last-post-time))             
              (remove #(blocked-content? transformation (:text %)))
              (map #(perform-replacements transformation %))
-             (map #(masto/intermediate-to-mastodon target %))
-             (masto/post-items mastodon-auth target))))))
+             (map #(ma/intermediate-to-mastodon target %))
+             (ma/post-items mastodon-auth target))))))
 
 (defn-spec tumblr-to-mastodon any?
-  [mastodon-auth masto/mastodon-auth?
-   tumblr-auth tumblr/tumblr-auth?
-   transformation ::transformation
+  [mastodon-auth md/mastodon-auth?
+   tumblr-auth td/tumblr-auth?
+   transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [accounts limit]} transformation]
     (doseq [account accounts]
-      (let [client (tumblr/tumblr-client tumblr-auth account)]
+      (let [client (ta/tumblr-client tumblr-auth account)]
         (.posts client 
                 #js {:limit (or limit 5)}
                 (post-tumblr-to-mastodon
@@ -158,29 +125,29 @@
                 )))))
 
 (defn-spec post-rss-to-mastodon any?
-  [mastodon-auth masto/mastodon-auth?
-   transformation ::transformation
+  [mastodon-auth md/mastodon-auth?
+   transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [source target resolve-urls?]} transformation]
     (fn [payload]
       (->> (infra/js->edn payload)
            (:items)
-           (map rss/parse-feed)
+           (map ra/parse-feed)
            (filter #(> (:created-at %) last-post-time))
            (remove #(blocked-content? transformation (:text %)))
            (map #(intermediate-resolve-urls resolve-urls? %))
            (map #(perform-replacements transformation %))
-           (map #(masto/intermediate-to-mastodon target %))
-           (masto/post-items mastodon-auth target)))))
+           (map #(ma/intermediate-to-mastodon target %))
+           (ma/post-items mastodon-auth target)))))
 
 
 (defn-spec rss-to-mastodon any?
-  [mastodon-auth masto/mastodon-auth?
-   transformation ::transformation
+  [mastodon-auth md/mastodon-auth?
+   transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [source target]} transformation]
     (doseq [[name url] (:feeds source)]
-      (rss/get-feed
+      (ra/get-feed
        url
        (post-rss-to-mastodon
         mastodon-auth

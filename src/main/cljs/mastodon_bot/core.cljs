@@ -2,51 +2,35 @@
   (:require
    [clojure.spec.alpha :as s]
    [clojure.spec.test.alpha :as st]
-   [clojure.string :as cs]
    [orchestra.core :refer-macros [defn-spec]]
    [expound.alpha :as expound]
    [mastodon-bot.infra :as infra]
+   [mastodon-bot.core-domain :as cd]
    [mastodon-bot.transform :as transform]
-   [mastodon-bot.mastodon-api :as masto]
-   [mastodon-bot.twitter-api :as twitter]
-   [mastodon-bot.tumblr-api :as tumblr]))
+   [mastodon-bot.mastodon-api :as ma]))
 
 (set! s/*explain-out* expound/printer)
 
-(s/def ::mastodon masto/mastodon-auth?)
-(s/def ::twitter twitter/twitter-auth?)
-(s/def ::tumblr tumblr/tumblr-auth?)
-(s/def ::transform transform/transformations?)
-(s/def ::auth (s/keys :opt-un [::mastodon ::twitter ::tumblr]))
-(def config? 
-  (s/keys :req-un [::auth ::transform]))
-
-(s/def ::options (s/* #{"-h"}))
-(s/def ::config-location (s/? (s/and string?
-                                     #(not (cs/starts-with? % "-")))))
-(s/def ::args (s/cat :options ::options 
-                     :config-location ::config-location))
-
-(defn-spec mastodon-auth ::mastodon
-  [config config?]
+(defn-spec mastodon-auth ::cd/mastodon
+  [config cd/config?]
   (get-in config [:auth :mastodon]))
 
-(defn-spec twitter-auth ::twitter
-  [config config?]
+(defn-spec twitter-auth ::cd/twitter
+  [config cd/config?]
   (get-in config [:auth :twitter]))
 
-(defn-spec tumblr-auth ::tumblr
-  [config config?]
+(defn-spec tumblr-auth ::cd/tumblr
+  [config cd/config?]
   (get-in config [:auth :tumblr]))
 
-(defn-spec transform ::transform
-  [config config?]
+(defn-spec transform ::cd/transform
+  [config cd/config?]
   (:transform config))
 
 (defn-spec transform! any?
-  [config config?]
+  [config cd/config?]
   (let [mastodon-auth (mastodon-auth config)]  
-    (masto/get-mastodon-timeline
+    (ma/get-mastodon-timeline
      mastodon-auth
      (fn [timeline]
        (let [last-post-time (-> timeline first :created_at (js/Date.))]
@@ -92,9 +76,9 @@
   ")
 
 (defn main [& args]
-  (let [parsed-args (s/conform ::args args)]
+  (let [parsed-args (s/conform ::cd/args args)]
     (if (= ::s/invalid parsed-args)
-      (do (s/explain ::args args)
+      (do (s/explain ::cd/args args)
           (infra/exit-with-error (str "Bad commandline arguments\n" usage)))
       (let [{:keys [options config-location]} parsed-args]
         (cond

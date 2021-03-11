@@ -1,45 +1,17 @@
 (ns mastodon-bot.mastodon-api
   (:require
-   [clojure.spec.alpha :as s]
-   [clojure.spec.test.alpha :as st]
    [orchestra.core :refer-macros [defn-spec]]
    [clojure.string :as string]
+   [mastodon-bot.mastodon-domain :as m]
    [mastodon-bot.infra :as infra]
    ["request" :as request]
    ["mastodon-api" :as mastodon]))
-
-(s/def ::access_token string?)
-(s/def ::api_url string?)
-(s/def ::account-id string?)
-(s/def ::append-screen-name? boolean?)
-(s/def ::signature string?)
-(s/def ::sensitive? boolean?)
-(s/def ::media-only? boolean?)
-(s/def ::visibility #{"direct" "private" "unlisted" "public"})
-(s/def ::max-post-length (fn [n] (and
-                                 (int? n)
-                                 (<= n 500)
-                                 (> n 0))))
-(def mastodon-auth? (s/keys :req-un [::account-id ::access_token ::api_url]))
-(def mastodon-target? (s/keys :opt-un [::max-post-length 
-                                       ::signature 
-                                       ::visibility
-                                       ::append-screen-name? 
-                                       ::sensitive?
-                                       ::media-only?]))
 
 (def mastodon-target-defaults {:append-screen-name? false
                                :visibility "public"
                                :sensitive? true
                                :media-only? false
                                :max-post-length 300})
-
-(s/def ::created-at any?)
-(s/def ::text string?)
-(s/def ::media-links string?)
-
-(def mastodon-output?  (s/keys :req-un [::created-at ::text]
-                               :opt-un [::media-links]))
 
 (defn trim-text [text max-post-length]
   (cond
@@ -58,19 +30,19 @@
 
     :else text))
 
-(defn-spec max-post-length ::max-post-length
-  [target mastodon-target?]
+(defn-spec max-post-length ::m/max-post-length
+  [target m/mastodon-target?]
   (:max-post-length target))
 
 (defn-spec mastodon-client any?
-  [mastodon-auth mastodon-auth?]
+  [mastodon-auth m/mastodon-auth?]
   (or (some-> mastodon-auth 
        clj->js 
        mastodon.)
       (infra/exit-with-error "missing Mastodon auth configuration!")))
 
 (defn-spec delete-status any?
-  [mastodon-auth mastodon-auth?
+  [mastodon-auth m/mastodon-auth?
    status-id string?]
   (.delete (mastodon-client mastodon-auth) (str "statuses/" status-id) #js {}))
 
@@ -89,8 +61,8 @@
          (.then #(-> % callback))))))
 
 (defn-spec post-image any?
-  [mastodon-auth mastodon-auth?
-   target mastodon-target?
+  [mastodon-auth m/mastodon-auth?
+   target m/mastodon-target?
    image-stream any?
    description string?
    callback fn?]
@@ -119,8 +91,8 @@
      (post-status mastodon-auth target status-text (not-empty ids) callback))))
 
 (defn-spec post-items any?
-  [mastodon-auth mastodon-auth?
-   target mastodon-target?
+  [mastodon-auth m/mastodon-auth?
+   target m/mastodon-target?
    items any?]
   (doseq [{:keys [text media-links]} items]
     (if media-links
@@ -129,7 +101,7 @@
         (post-status mastodon-auth target text)))))
 
 (defn-spec get-mastodon-timeline any?
-  [mastodon-auth mastodon-auth?
+  [mastodon-auth m/mastodon-auth?
    callback fn?]
   (.then (.get (mastodon-client mastodon-auth)
                (str "accounts/" (:account-id mastodon-auth) "/statuses") #js {})
@@ -138,8 +110,8 @@
               (infra/exit-with-error error)
               (callback response)))))
 
-(defn-spec intermediate-to-mastodon mastodon-output?
-  [target mastodon-target?
+(defn-spec intermediate-to-mastodon m/mastodon-output?
+  [target m/mastodon-target?
    input any?]
   (let [target-with-defaults (merge mastodon-target-defaults
                                     target)

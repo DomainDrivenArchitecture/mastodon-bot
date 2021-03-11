@@ -1,7 +1,14 @@
-config.edn
-config*.edn
+# cljs ignores
 package-lock.json
-/.shadow-cljs
 /node_modules
+/.shadow-cljs
+
+# mastodon-bot ignores
+config*.edn
+
+# lein ignores
 /target
-/mastodon-bot.js
+pom.xml
+
+# ide ignores
+.calva/

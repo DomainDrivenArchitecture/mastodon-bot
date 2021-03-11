@@ -1,5 +1,7 @@
-{:source-paths ["src/main"
-                "src/test"]
+{:source-paths ["src/main/cljc"
+                "src/main/cljs"
+                "src/test/cljc"
+                "src/test/cljs"]
  :dependencies [[orchestra "2019.02.06-1"]
                 [expound "0.8.4"]]
  :builds       {:test {:target    :node-test

@@ -1,7 +1,6 @@
 (ns mastodon-bot.mastodon-api-test
   (:require
    [cljs.test :refer-macros [deftest is testing run-tests]]
-   [clojure.spec.alpha :as s]
    [mastodon-bot.mastodon-api :as sut]
    ))
 
