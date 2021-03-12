@@ -110,7 +110,7 @@ upload-cljs-release:
     - cp package.json target/npm-build/
     - npm publish ./target/npm-build --access public
 
-build:
+image-test-publish:
   image: domaindrivenarchitecture/devops-build:latest
   stage: image
   rules:

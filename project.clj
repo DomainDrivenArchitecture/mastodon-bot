@@ -13,4 +13,10 @@
                         ["releases" :clojars]]
   :profiles {:test {:test-paths ["src/test/cljc"]
                     :resource-paths ["src/test/resources"]
-                    :dependencies []}})
+                    :dependencies []}}
+  :release-tasks [["vcs" "assert-committed"]
+                  ["change" "version" "leiningen.release/bump-version" "release"]
+                  ["vcs" "commit"]
+                  ["vcs" "tag"]
+                  ["deploy"]
+                  ["change" "version" "leiningen.release/bump-version"]])

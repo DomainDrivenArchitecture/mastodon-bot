@@ -8,7 +8,7 @@ config*.edn
 
 # lein ignores
 /target
-pom.xml
+pom.*
 
 # pybuilder ignores
 .pybuilder
@@ -17,3 +17,4 @@ __pycache__
 # ide ignores
 .calva/
 
+pom.xml.asc
