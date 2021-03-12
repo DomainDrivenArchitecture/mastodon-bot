@@ -99,16 +99,9 @@ with later timestamps to avoid duplicate posts. On the first run the timestamp w
 }
 ```
 
-* the bot looks for `config.edn` at its relative path by default, an alternative location can be specified either using the `MASTODON_BOT_CONFIG` environment variable or passing the path to config as an argument
+The bot looks for `config.edn` at its relative path by default, an alternative location can be specified either using the `MASTODON_BOT_CONFIG` environment variable or passing the path to config as an argument
 
-* transformations have source `(s/def ::source-type #{:twitter :rss :tumblr})` und target `(s/def ::target-type #{:mastodon})` you can combine freely. Multiple transformations for same source-target combination are possible. Source and targets refer to the auth section for their credentials.
-
-* install NPM modules: `npm install`
-* compile: `npx shadow-cljs release app`
-* run the bot: `npm start`
-* to poll at intervals setup a cron job such as:
-
-    */30 * * * * npm start /path/to/config.edn > /dev/null 2>&1
+Transformations have source `(s/def ::source-type #{:twitter :rss :tumblr})` und target `(s/def ::target-type #{:mastodon})` you can combine freely. Multiple transformations for same source-target combination are possible. Source and targets refer to the auth section for their credentials.
 
 ## License
 
