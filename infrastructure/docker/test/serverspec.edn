@@ -1,0 +1,2 @@
+{:command [{:cmd "mastodon-bot -h"
+            :exit-code 0}]}
