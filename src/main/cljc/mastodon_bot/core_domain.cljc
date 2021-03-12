@@ -10,8 +10,13 @@
 (s/def ::mastodon md/mastodon-auth?)
 (s/def ::twitter twd/twitter-auth?)
 (s/def ::tumblr td/tumblr-auth?)
+
+(def auth? 
+  (s/keys :opt-un [::mastodon ::twitter ::tumblr]))
+(s/def ::auth auth?)
+
 (s/def ::transform trd/transformations?)
-(s/def ::auth (s/keys :opt-un [::mastodon ::twitter ::tumblr]))
+
 (def config? 
   (s/keys :req-un [::auth ::transform]))
 

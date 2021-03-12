@@ -3,7 +3,7 @@
                 "src/test/cljc"
                 "src/test/cljs"]
  :dependencies [[orchestra "2019.02.06-1"]
-                [expound "0.8.4"]]
+                [expound "0.8.9"]]
  :builds       {:test {:target    :node-test
                        :output-to "target/node-tests.js"
                        :autorun   true
