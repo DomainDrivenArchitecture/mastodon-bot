@@ -14,6 +14,8 @@ services:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - node_modules/
+      - .shadow-cljs/
+      - .m2
   before_script:
     - npm install
 
@@ -33,6 +35,10 @@ services:
 
 .clj-uploadjob: &clj-upload
   image: clojure:lein-2.7.1-alpine
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .m2
   before_script:
     - echo "{:auth {:repository-auth {#\"clojars\" {:username \"${CLOJARS_USER}\" :password \"${CLOJARS_PASSWORD}\" }}}}" > ~/.lein/profiles.clj
 
@@ -41,10 +47,6 @@ build_and_test:
   stage: build_and_test
   script:
     - shadow-cljs compile test
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - .m2
 
 #activate as soon as https://github.com/thheller/shadow-cljs/issues/843 is implemented
 .report:
@@ -107,14 +109,6 @@ upload-cljs-release:
   script:
     - cp package.json target/npm-build/
     - npm publish ./target/npm-build --access public
-
-upload-clj-release:
-  <<: *clj-upload
-  stage: upload
-  rules:
-    - if: '$CI_COMMIT_TAG != null'
-  script:
-    - lein deploy clojars
 
 build:
   image: domaindrivenarchitecture/devops-build:latest

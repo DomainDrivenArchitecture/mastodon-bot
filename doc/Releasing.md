@@ -5,9 +5,7 @@
 vi package.json
 vi project.clj
 
-git commit -am "release"
-git tag -am "release" [release version no]
-git push --follow-tags
+lein release
 
 # bump version - increase version and add -SNAPSHOT
 vi package.json
