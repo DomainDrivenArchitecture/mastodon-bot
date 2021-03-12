@@ -73,6 +73,7 @@
   mastodon-bot /path/to/config.edn
   
   set MASTODON_BOT_CONFIG environment variable to run without parameters
+  set MASTODON_BOT_CREDENTIALS environment variable to find :auth part in a separate file. Both configs will be merged.
   ")
 
 (defn main [& args]
