@@ -9,18 +9,16 @@ services:
   - docker:19.03.12-dind
 
 .cljs-job: &cljs
-  image: node:lts-buster
+  image: domaindrivenarchitecture/shadow-cljs
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - node_modules/
   before_script:
-    - apt update && apt -qqy install openjdk-11-jre-headless
-    - npm install -g --save-dev shadow-cljs
     - npm install
 
-.js-job: &js-upload
-  image: node:lts-buster
+.cljs-upload-job: &cljs-upload
+  image: domaindrivenarchitecture/shadow-cljs
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -33,7 +31,7 @@ services:
     - cp target/mastodon-bot.js.sha512 target/npm-build/
     - cp README.md target/npm-build/
 
-.clj-job: &clj
+.clj-uploadjob: &clj-upload
   image: clojure:lein-2.7.1-alpine
   before_script:
     - echo "{:auth {:repository-auth {#\"clojars\" {:username \"${CLOJARS_USER}\" :password \"${CLOJARS_PASSWORD}\" }}}}" > ~/.lein/profiles.clj
@@ -84,7 +82,7 @@ include:
   - template: Security/SAST.gitlab-ci.yml
 
 upload-cljs-prerelease:
-  <<: *js-upload
+  <<: *cljs-upload
   stage: upload
   rules:
     - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG == null'
@@ -94,26 +92,34 @@ upload-cljs-prerelease:
     - npm publish ./target/npm-build --access public
 
 upload-clj-prerelease:
-  <<: *clj
+  <<: *clj-upload
   stage: upload
   rules:
     - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG == null'
   script:
     - lein deploy clojars
 
-upload-js-release:
-  <<: *js-upload
+upload-cljs-release:
+  <<: *cljs-upload
   stage: upload
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG != null'
+    - if: '$CI_COMMIT_TAG != null'
   script:
     - cp package.json target/npm-build/
     - npm publish ./target/npm-build --access public
 
+upload-clj-release:
+  <<: *clj-upload
+  stage: upload
+  rules:
+    - if: '$CI_COMMIT_TAG != null'
+  script:
+    - lein deploy clojars
+
 build:
-  image: domaindrivenarchitecture/dda-devops-build:latest
+  image: domaindrivenarchitecture/devops-build:latest
   stage: image
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master" && $CI_COMMIT_TAG != null'
+    - if: '$CI_COMMIT_TAG != null'
   script:
     - cd infrastructure/docker && pyb image test publish
