@@ -10,5 +10,10 @@ config*.edn
 /target
 pom.xml
 
+# pybuilder ignores
+.pybuilder
+__pycache__
+
 # ide ignores
 .calva/
+
