@@ -3,7 +3,7 @@
   :url "https://github.com/yogthos/mastodon-bot"
   :author "Dmitri Sotnikov"
   :license {:name "MIT"}
-  :dependencies []
+  :dependencies [[org.clojure/clojure "1.10.3"]]
   :source-paths ["src/main/cljc"
                  "src/main/clj"]
   :resource-paths ["src/main/resources"]

@@ -42,11 +42,17 @@ services:
   before_script:
     - echo "{:auth {:repository-auth {#\"clojars\" {:username \"${CLOJARS_USER}\" :password \"${CLOJARS_PASSWORD}\" }}}}" > ~/.lein/profiles.clj
 
-build_and_test:
+build-and-test-cljs:
   <<: *cljs
   stage: build_and_test
   script:
     - shadow-cljs compile test
+
+build-and-test-clj:
+  <<: *clj-upload
+  stage: build_and_test
+  script:
+    - lein test
 
 #activate as soon as https://github.com/thheller/shadow-cljs/issues/843 is implemented
 .report:

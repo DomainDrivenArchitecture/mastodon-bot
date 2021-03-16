@@ -1,6 +1,7 @@
 (ns mastodon-bot.transform-domain-test
   (:require
-   [cljs.test :refer-macros [deftest is testing run-tests]]
+   #?(:clj [clojure.test :refer [deftest is are testing run-tests]]
+      :cljs [cljs.test :refer-macros [deftest is are testing run-tests]])
    [clojure.spec.alpha :as s]
    [mastodon-bot.transform-domain :as sut]
    ))
