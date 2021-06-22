@@ -46,14 +46,14 @@
 (defn-spec user-timeline any?
   [twitter-auth td/twitter-auth?
    source td/twitter-source?
-   account ::td/account
-   callback fn?]
+   account ::td/account]
   (let [{:keys [include-rts? include-replies?]} source]
-    (.get (twitter-client twitter-auth)
-          "statuses/user_timeline"
-          #js {:screen_name account
-               :tweet_mode "extended"
-               :include_rts (boolean include-rts?)
-               :exclude_replies (not (boolean include-replies?))}
-          callback)))
+    (infra/resolve-promise
+     (.get (twitter-client twitter-auth)
+           "statuses/user_timeline"
+           #js {:screen_name account
+                :tweet_mode "extended"
+                :include_rts (boolean include-rts?)
+                :exclude_replies (not (boolean include-replies?))})
+     [])))
   

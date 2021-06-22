@@ -43,38 +43,33 @@
   (update input :text #(reduce-kv string/replace % (:replacements transformation))))
 
 (defn-spec post-tweets-to-mastodon any?
-  [mastodon-auth md/mastodon-auth?
+  [tweets any?
+   mastodon-auth md/mastodon-auth?
    transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [source target resolve-urls?]} transformation]
-    (fn [error tweets response]
-      (if error
-        (infra/exit-with-error error)
-        (->> (infra/js->edn tweets)
-             (map twa/parse-tweet)
-             (filter #(> (:created-at %) last-post-time))
-             (remove #(blocked-content? transformation (:text %)))
-             (map #(intermediate-resolve-urls resolve-urls? %))
-             (map #(twa/nitter-url source %))
-             (map #(perform-replacements transformation %))
-             (map #(ma/intermediate-to-mastodon target %))
-             (ma/post-items mastodon-auth target))))))
+    (->> (infra/js->edn tweets)
+         (map twa/parse-tweet)
+         (filter #(> (:created-at %) last-post-time))
+         (remove #(blocked-content? transformation (:text %)))
+         (map #(intermediate-resolve-urls resolve-urls? %))
+         (map #(twa/nitter-url source %))
+         (map #(perform-replacements transformation %))
+         (map #(ma/intermediate-to-mastodon target %))
+         (ma/post-items mastodon-auth target))))
 
 (defn-spec tweets-to-mastodon any?
   [mastodon-auth md/mastodon-auth?
    twitter-auth twd/twitter-auth?
    transformation ::trd/transformation
    last-post-time any?]
-  (let [{:keys [source target resolve-urls?]} transformation]
-    (doseq [account (:accounts source)]
-      (twa/user-timeline
-       twitter-auth
-       source
-       account
-       (post-tweets-to-mastodon 
-        mastodon-auth
-        transformation
-        last-post-time)))))
+  (let [{:keys [source target resolve-urls?]} transformation
+        accounts (:accounts source)]
+    (infra/log (str "processing tweets for " accounts))
+    (doseq [account accounts]
+      (->  (twa/user-timeline twitter-auth source account)
+           (post-tweets-to-mastodon mastodon-auth transformation last-post-time)))
+    (infra/log "done.")))
 
 (defn-spec post-tumblr-to-mastodon any?
   [mastodon-auth md/mastodon-auth?
@@ -98,7 +93,9 @@
    tumblr-auth td/tumblr-auth?
    transformation ::trd/transformation
    last-post-time any?]
-  (let [{:keys [accounts limit]} transformation]
+  (let [{:keys [source target]} transformation
+        {:keys [accounts limit]} source]
+    (infra/log (str "processing tumblr for " accounts))
     (doseq [account accounts]
       (let [client (ta/tumblr-client tumblr-auth account)]
         (.posts client 
@@ -110,31 +107,30 @@
                 )))))
 
 (defn-spec post-rss-to-mastodon any?
-  [mastodon-auth md/mastodon-auth?
+  [payload any?
+   mastodon-auth md/mastodon-auth?
    transformation ::trd/transformation
    last-post-time any?]
   (let [{:keys [source target resolve-urls?]} transformation]
-    (fn [payload]
-      (->> (infra/js->edn payload)
-           (:items)
-           (map ra/parse-feed)
-           (filter #(> (:created-at %) last-post-time))
-           (remove #(blocked-content? transformation (:text %)))
-           (map #(intermediate-resolve-urls resolve-urls? %))
-           (map #(perform-replacements transformation %))
-           (map #(ma/intermediate-to-mastodon target %))
-           (ma/post-items mastodon-auth target)))))
+    (->> (infra/js->edn payload)
+         (:items)
+         (map ra/parse-feed)
+         (filter #(> (:created-at %) last-post-time))
+         (remove #(blocked-content? transformation (:text %)))
+         (map #(intermediate-resolve-urls resolve-urls? %))
+         (map #(perform-replacements transformation %))
+         (map #(ma/intermediate-to-mastodon target %))
+         (ma/post-items mastodon-auth target))))
 
 
 (defn-spec rss-to-mastodon any?
   [mastodon-auth md/mastodon-auth?
    transformation ::trd/transformation
    last-post-time any?]
-  (let [{:keys [source target]} transformation]
-    (doseq [[name url] (:feeds source)]
-      (ra/get-feed
-       url
-       (post-rss-to-mastodon
-        mastodon-auth
-        transformation
-        last-post-time)))))
+  (let [{:keys [source target]} transformation
+        {:keys [feeds]} source]
+    (infra/log (str "processing rss for " feeds))
+    (doseq [[name url] feeds]
+      (-> (ra/get-feed url)
+          (post-rss-to-mastodon mastodon-auth transformation last-post-time)))
+    (infra/log "done.")))

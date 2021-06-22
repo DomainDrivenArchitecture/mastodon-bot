@@ -6,11 +6,15 @@
    ["deasync" :as deasync]
    ["node-fetch" :as fetch]))
 
-(defn debug [item]
+(defn log-error [item]
+  (js/console.error item)
+  item)
+
+(defn log [item]
   (js/console.log item)
   item)
 
-(defn debug-first [item]
+(defn log-first [item]
   (js/console.log (first item))
   item)
 
@@ -47,10 +51,13 @@
 
 (defn resolve-promise [promise result-on-error]
   (let [done (atom false)
-        result (atom nil)
-        promise (-> promise
-                    (.then #(do (reset! result %) (reset! done true)))
-                    (.catch #(do (reset! result result-on-error) (reset! done true))))]
+        result (atom nil)]
+    (-> promise
+        (.then #(do (reset! result %) (reset! done true)))
+        (.catch #(do
+                   (log-error %)
+                   (reset! result result-on-error)
+                   (reset! done true))))
     (.loopWhile deasync (fn [] (not @done)))
     @result))
 

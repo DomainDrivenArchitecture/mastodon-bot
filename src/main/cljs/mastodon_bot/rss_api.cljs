@@ -2,6 +2,7 @@
   (:require
    [orchestra.core :refer-macros [defn-spec]]
    [mastodon-bot.rss-domain :as rd]
+   [mastodon-bot.infra :as infra]
    [clojure.spec.alpha :as s]
    ["rss-parser" :as rss]))
 
@@ -20,9 +21,5 @@
                   link)}))
 
 (defn-spec get-feed map?
-  [url string?
-   callback fn?]
-  (print url)
-  (-> (.parseURL (rss-client) url)
-      (.then callback)
-      (.catch #(js/console.log %))))
+  [url string?]
+  (infra/resolve-promise (.parseURL (rss-client) url) []))
