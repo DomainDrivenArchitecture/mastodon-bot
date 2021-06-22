@@ -2,11 +2,14 @@
   (:require
    [orchestra.core :refer-macros [defn-spec]]
    [mastodon-bot.rss-domain :as rd]
+   [clojure.spec.alpha :as s]
    ["rss-parser" :as rss]))
 
+(s/def ::pos-integer (and #(< 0 %) integer?))
 (defn-spec rss-client any?
-  []
-  (rss.))
+  [& {:keys [timeout]
+      :or {timeout 3000}} (s/keys :opt-un [::pos-integer])]
+  (rss. #js {:timeout timeout}))
 
 (defn-spec parse-feed any?
   [item ::rd/feed-item]  
@@ -21,4 +24,5 @@
    callback fn?]
   (print url)
   (-> (.parseURL (rss-client) url)
-      (.then callback)))
+      (.then callback)
+      (.catch #(js/console.log %))))

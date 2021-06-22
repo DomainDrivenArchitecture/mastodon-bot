@@ -1,0 +1,10 @@
+@startuml
+"Mastodon-Bot" -> Config: Call rss-sources
+Config --> "Mastodon-Bot": URL list of rss-sources
+"Mastodon-Bot" -> "Mastodon-Bot": Call "get-feed" for every rss-source.\nStart asyncronous Promise.
+activate "Mastodon-Bot"
+"Mastodon-Bot" -> "RSS-Sources": Call URL to parse RSS-Feed
+"RSS-Sources" --> "Mastodon-Bot": RSS-Feed
+"Mastodon-Bot" -> Mastodon: Post feed by post-rss-to-mastodon
+deactivate "Mastodon-Bot"
+@enduml
