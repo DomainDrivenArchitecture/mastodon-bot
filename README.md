@@ -103,6 +103,13 @@ The bot looks for `config.edn` at its relative path by default, an alternative l
 
 Transformations have source `(s/def ::source-type #{:twitter :rss :tumblr})` und target `(s/def ::target-type #{:mastodon})` you can combine freely. Multiple transformations for same source-target combination are possible. Source and targets refer to the auth section for their credentials.
 
+## Development & mirrors
+Development happens at: https://repo.prod.meissa.de/meissa/mastodon-bot
+
+Mirrors are:
+* https://gitlab.com/domaindrivenarchitecture/mastodon-bot (CI issues and PR)
+* https://github.com/DomainDrivenArchitecture/mastodon-bot
+
 ## License
 
 Copyright © 2018 Dmitri Sotnikov
